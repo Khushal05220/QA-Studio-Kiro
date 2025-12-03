@@ -14,10 +14,10 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { response: apiResponse, framework } = req.body;
+    const { request, response } = req.body;
 
-    if (!apiResponse) {
-      return res.status(400).json({ error: 'API response is required' });
+    if (!response) {
+      return res.status(400).json({ error: 'Response is required' });
     }
 
     const apiKey = process.env.GEMINI_API_KEY;
@@ -25,36 +25,39 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: 'Gemini API key not configured' });
     }
 
-    const prompt = `Generate comprehensive test assertions for the following API response using ${framework || 'Postman'}:
+    const prompt = `Generate test assertions for this API response:
 
-Response:
-${JSON.stringify(apiResponse, null, 2)}
+Request: ${request?.method || 'GET'} ${request?.url || ''}
+Status: ${response.status}
+Response Body:
+${typeof response.body === 'string' ? response.body.substring(0, 2000) : JSON.stringify(response.body, null, 2).substring(0, 2000)}
 
-Generate assertions to verify:
-- Status code
-- Response time
-- Content-Type header
-- Response structure
-- Data types
-- Required fields
-- Value validations
-- Array lengths
-- Nested objects
-
-Return assertions in this JSON format:
+Generate assertions in this exact JSON format:
 {
   "assertions": [
     {
-      "type": "status|header|body|performance",
-      "description": "What is being tested",
-      "code": "Actual assertion code for ${framework || 'Postman'}"
+      "type": "status",
+      "description": "Status code should be 200",
+      "code": "pm.test('Status code is 200', function() { pm.response.to.have.status(200); });"
+    },
+    {
+      "type": "body",
+      "description": "Response should have required fields",
+      "code": "pm.test('Has required fields', function() { var json = pm.response.json(); pm.expect(json).to.have.property('id'); });"
     }
   ]
 }
 
+Generate 5-8 meaningful assertions covering:
+- Status code validation
+- Response structure
+- Data type checks
+- Required field presence
+- Value validations
+
 Return ONLY valid JSON, no markdown formatting.`;
 
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+    const apiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -62,16 +65,15 @@ Return ONLY valid JSON, no markdown formatting.`;
       })
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Gemini API error: ${response.status} ${errorText}`);
+    if (!apiResponse.ok) {
+      throw new Error(`Gemini API error: ${apiResponse.status}`);
     }
 
-    const result = await response.json();
+    const result = await apiResponse.json();
     let text = result.candidates?.[0]?.content?.parts?.[0]?.text;
     
     if (!text) {
-      throw new Error('No text in Gemini response');
+      throw new Error('No response from Gemini');
     }
 
     text = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
@@ -80,9 +82,6 @@ Return ONLY valid JSON, no markdown formatting.`;
     res.status(200).json(data);
   } catch (error) {
     console.error('Error generating assertions:', error);
-    res.status(500).json({ 
-      error: error.message || 'Failed to generate assertions',
-      details: error.toString()
-    });
+    res.status(500).json({ error: error.message || 'Failed to generate assertions' });
   }
 }

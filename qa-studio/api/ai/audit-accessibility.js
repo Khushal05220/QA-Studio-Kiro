@@ -14,10 +14,10 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { url, html, wcagLevel } = req.body;
+    const { url, scope } = req.body;
 
-    if (!url && !html) {
-      return res.status(400).json({ error: 'URL or HTML is required' });
+    if (!url) {
+      return res.status(400).json({ error: 'URL is required' });
     }
 
     const apiKey = process.env.GEMINI_API_KEY;
@@ -25,39 +25,33 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: 'Gemini API key not configured' });
     }
 
-    const prompt = `Perform a WCAG ${wcagLevel || '2.1 AA'} accessibility audit for the following URL:
+    const prompt = `Perform a WCAG 2.1 AA accessibility audit for the website: ${url}
 
-${url || 'Website'}
-
-Analyze for accessibility issues and return results in this JSON format:
+Analyze for accessibility issues and return results in this exact JSON format:
 {
-  "score": number (0-100),
-  "summary": "Brief summary of overall accessibility",
+  "score": 75,
+  "summary": "Brief summary of overall accessibility status",
   "findings": [
     {
-      "id": "unique-id",
-      "severity": "Critical|High|Medium|Low",
+      "id": "finding-1",
+      "severity": "Error",
       "wcagGuideline": "1.1.1 Non-text Content",
-      "title": "Issue title",
-      "description": "Detailed description",
-      "selector": "CSS selector or element description",
-      "suggestedFix": "How to fix this issue",
-      "snippet": "Code example showing the issue"
+      "title": "Images missing alt text",
+      "description": "Several images on the page lack alternative text descriptions",
+      "selector": "img.hero-image",
+      "suggestedFix": "Add descriptive alt attributes to all images",
+      "snippet": "<img src='hero.jpg' class='hero-image'>"
     }
   ]
 }
 
-Focus on:
-- Keyboard navigation
-- Screen reader compatibility
-- Color contrast (4.5:1 minimum)
-- Alt text for images
-- Form labels and ARIA
-- Heading hierarchy
-- Focus indicators
-- Semantic HTML
+IMPORTANT:
+- severity MUST be either "Error" or "Warning" (not Critical/High/Medium/Low)
+- Generate 5-10 realistic findings based on common accessibility issues
+- Include a mix of Error and Warning severities
+- Score should be 0-100 based on severity of issues found
 
-Generate at least 5-10 realistic findings. Return ONLY valid JSON, no markdown formatting.`;
+Return ONLY valid JSON, no markdown formatting.`;
 
     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
       method: 'POST',
@@ -69,14 +63,14 @@ Generate at least 5-10 realistic findings. Return ONLY valid JSON, no markdown f
 
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(`Gemini API error: ${response.status} ${errorText}`);
+      throw new Error(`Gemini API error: ${response.status}`);
     }
 
     const result = await response.json();
     let text = result.candidates?.[0]?.content?.parts?.[0]?.text;
     
     if (!text) {
-      throw new Error('No text in Gemini response');
+      throw new Error('No response from Gemini');
     }
 
     text = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
@@ -85,9 +79,6 @@ Generate at least 5-10 realistic findings. Return ONLY valid JSON, no markdown f
     res.status(200).json(data);
   } catch (error) {
     console.error('Error auditing accessibility:', error);
-    res.status(500).json({ 
-      error: error.message || 'Failed to audit accessibility',
-      details: error.toString()
-    });
+    res.status(500).json({ error: error.message || 'Failed to audit accessibility' });
   }
 }

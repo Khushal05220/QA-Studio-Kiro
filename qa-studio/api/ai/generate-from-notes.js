@@ -27,51 +27,50 @@ export default async function handler(req, res) {
 
     let prompt = '';
     
-    if (type === 'user-story') {
-      prompt = `Convert the following notes into a well-formatted user story:
+    if (type === 'story') {
+      prompt = `Convert these notes into a user story:
 
-Notes:
-${notes}
+Notes: ${notes}
 
-Return in this JSON format:
+Return in this exact JSON format:
 {
-  "title": "Brief title",
-  "asA": "User role",
-  "iWant": "Feature/action",
-  "soThat": "Benefit/value",
-  "acceptanceCriteria": ["criterion 1", "criterion 2"],
-  "priority": "Critical|High|Medium|Low",
-  "tags": ["tag1", "tag2"]
+  "generated": {
+    "title": "Brief descriptive title",
+    "description": "Detailed description of the user story",
+    "acceptanceCriteria": "- Criterion 1\\n- Criterion 2\\n- Criterion 3",
+    "storyPoints": "3",
+    "priority": "Medium",
+    "epic": "Feature Area",
+    "status": "New"
+  }
 }
 
 Return ONLY valid JSON, no markdown formatting.`;
     } else if (type === 'bug') {
-      prompt = `Convert the following notes into a well-formatted bug report:
+      prompt = `Convert these notes into a bug report:
 
-Notes:
-${notes}
+Notes: ${notes}
 
-Return in this JSON format:
+Return in this exact JSON format:
 {
-  "title": "Brief bug title",
-  "description": "Detailed description",
-  "stepsToReproduce": ["step 1", "step 2"],
-  "expectedBehavior": "What should happen",
-  "actualBehavior": "What actually happens",
-  "severity": "Critical|Major|Minor|Trivial",
-  "priority": "Critical|High|Medium|Low",
-  "environment": "Browser/OS/version",
-  "tags": ["tag1", "tag2"]
+  "generated": {
+    "title": "Brief bug title",
+    "description": "Detailed description of the bug",
+    "stepsToReproduce": [
+      {"step": 1, "description": "First step"},
+      {"step": 2, "description": "Second step"},
+      {"step": 3, "description": "Third step"}
+    ],
+    "severity": "Major",
+    "priority": "High",
+    "environment": "Chrome 120, Windows 11",
+    "status": "New"
+  }
 }
 
 Return ONLY valid JSON, no markdown formatting.`;
     } else {
-      prompt = `Convert the following notes into structured content:
-
-Notes:
-${notes}
-
-Provide a clear, organized version of the content.`;
+      return res.status(400).json({ error: 'Type must be "story" or "bug"' });
     }
 
     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
@@ -83,29 +82,22 @@ Provide a clear, organized version of the content.`;
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Gemini API error: ${response.status} ${errorText}`);
+      throw new Error(`Gemini API error: ${response.status}`);
     }
 
     const result = await response.json();
     let text = result.candidates?.[0]?.content?.parts?.[0]?.text;
     
     if (!text) {
-      throw new Error('No text in Gemini response');
+      throw new Error('No response from Gemini');
     }
 
-    if (type === 'user-story' || type === 'bug') {
-      text = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-      const data = JSON.parse(text);
-      res.status(200).json(data);
-    } else {
-      res.status(200).json({ content: text.trim() });
-    }
+    text = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+    const data = JSON.parse(text);
+    
+    res.status(200).json(data);
   } catch (error) {
     console.error('Error generating from notes:', error);
-    res.status(500).json({ 
-      error: error.message || 'Failed to generate from notes',
-      details: error.toString()
-    });
+    res.status(500).json({ error: error.message || 'Failed to generate from notes' });
   }
 }

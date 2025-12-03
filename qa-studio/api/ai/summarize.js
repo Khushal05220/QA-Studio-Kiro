@@ -14,10 +14,11 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { text, type } = req.body;
+    const { content, text, type } = req.body;
+    const inputText = content || text;
 
-    if (!text) {
-      return res.status(400).json({ error: 'Text is required' });
+    if (!inputText) {
+      return res.status(400).json({ error: 'Content or text is required' });
     }
 
     const apiKey = process.env.GEMINI_API_KEY;
@@ -25,11 +26,26 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: 'Gemini API key not configured' });
     }
 
-    const prompt = `Summarize the following ${type || 'text'} concisely:
+    let prompt = '';
+    
+    if (type === 'accessibility-audit') {
+      prompt = `Summarize this accessibility audit into key points:
 
-${text}
+${JSON.stringify(inputText, null, 2)}
+
+Provide 3-5 bullet points highlighting:
+- Most critical issues to fix
+- Quick wins for improvement
+- Overall accessibility status
+
+Keep it concise and actionable.`;
+    } else {
+      prompt = `Summarize the following content concisely:
+
+${typeof inputText === 'string' ? inputText : JSON.stringify(inputText, null, 2)}
 
 Provide a clear, concise summary that captures the key points.`;
+    }
 
     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
       method: 'POST',
@@ -40,23 +56,19 @@ Provide a clear, concise summary that captures the key points.`;
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Gemini API error: ${response.status} ${errorText}`);
+      throw new Error(`Gemini API error: ${response.status}`);
     }
 
     const result = await response.json();
     const summary = result.candidates?.[0]?.content?.parts?.[0]?.text;
     
     if (!summary) {
-      throw new Error('No text in Gemini response');
+      throw new Error('No response from Gemini');
     }
     
     res.status(200).json({ summary: summary.trim() });
   } catch (error) {
     console.error('Error summarizing:', error);
-    res.status(500).json({ 
-      error: error.message || 'Failed to summarize',
-      details: error.toString()
-    });
+    res.status(500).json({ error: error.message || 'Failed to summarize' });
   }
 }
