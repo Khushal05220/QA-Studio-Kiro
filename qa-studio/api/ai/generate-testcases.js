@@ -1,5 +1,3 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
-
 export default async function handler(req, res) {
   // Enable CORS
   res.setHeader('Access-Control-Allow-Credentials', true);
@@ -17,20 +15,24 @@ export default async function handler(req, res) {
   }
 
   try {
+    console.log('Generate test cases request received');
     const { userStory, context } = req.body;
+    console.log('User story:', userStory?.substring(0, 100));
 
     if (!userStory) {
+      console.error('No user story provided');
       return res.status(400).json({ error: 'User story is required' });
     }
 
     const apiKey = process.env.GEMINI_API_KEY;
+    console.log('API key exists:', !!apiKey);
+    
     if (!apiKey) {
+      console.error('GEMINI_API_KEY not set');
       return res.status(500).json({ error: 'Gemini API key not configured' });
     }
 
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-
+    // Use direct REST API call instead of SDK
     const prompt = `You are a QA engineer. Generate comprehensive test cases for the following user story.
 
 User Story:
@@ -64,17 +66,59 @@ Generate a balanced mix of:
 
 Return ONLY valid JSON, no markdown formatting.`;
 
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    let text = response.text();
+    console.log('Calling Gemini API via REST...');
+    
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        contents: [{
+          parts: [{
+            text: prompt
+          }]
+        }]
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Gemini API error:', response.status, errorText);
+      
+      // Check for rate limit error
+      if (response.status === 429 || errorText.includes('quota') || errorText.includes('rate limit')) {
+        return res.status(429).json({ 
+          error: 'Rate limit exceeded. Please wait a moment and try again.',
+          details: 'The Gemini API has a limit of 15 requests per minute on the free tier.'
+        });
+      }
+      
+      throw new Error(`Gemini API error: ${response.status} ${errorText}`);
+    }
+
+    const result = await response.json();
+    console.log('Gemini API responded successfully');
+    
+    let text = result.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!text) {
+      throw new Error('No text in Gemini response');
+    }
+    
+    console.log('Response text length:', text.length);
 
     // Clean up markdown formatting
     text = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
 
     const data = JSON.parse(text);
+    console.log('Successfully parsed JSON, test cases:', data.testCases?.length);
     res.status(200).json(data);
   } catch (error) {
     console.error('Error generating test cases:', error);
-    res.status(500).json({ error: error.message || 'Failed to generate test cases' });
+    console.error('Error stack:', error.stack);
+    res.status(500).json({ 
+      error: error.message || 'Failed to generate test cases',
+      details: error.toString()
+    });
   }
 }
