@@ -492,9 +492,16 @@ export function ApiTesting() {
               <h3 className="font-semibold text-white mb-3">Generated Assertions</h3>
               <div className="space-y-2">
                 {assertions.map((a, i) => (
-                  <div key={i} className="flex items-center gap-3 p-2 bg-gray-800 rounded">
-                    <Icons.Check className="w-4 h-4 text-green-400" />
-                    <span className="text-sm text-gray-300">{a}</span>
+                  <div key={i} className="p-3 bg-gray-800 rounded space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Icons.Check className="w-4 h-4 text-green-400" />
+                      <span className="text-sm text-gray-300">{a.description || a}</span>
+                    </div>
+                    {a.code && (
+                      <pre className="text-xs text-teal-400 bg-gray-900 p-2 rounded overflow-x-auto">
+                        <code>{a.code}</code>
+                      </pre>
+                    )}
                   </div>
                 ))}
               </div>
