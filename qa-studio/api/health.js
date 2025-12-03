@@ -15,7 +15,7 @@ export default async function handler(req, res) {
     if (apiKey) {
       try {
         const genAI = new GoogleGenerativeAI(apiKey);
-        model = 'gemini-2.5-flash';
+        model = 'gemini-2.0-flash';
         geminiConnected = true;
       } catch (error) {
         console.error('Gemini connection failed:', error);
