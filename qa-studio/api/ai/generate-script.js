@@ -13,14 +13,19 @@ export default async function handler(req, res) {
   }
 
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+    res.write(`data: ${JSON.stringify({ error: 'Method not allowed' })}\n\n`);
+    res.end();
+    return;
   }
 
   try {
-    const { testCase, framework, language } = req.body;
+    const { scenario, testCase, framework, language, browser, headless, useFixtures, testData } = req.body;
 
-    if (!testCase) {
-      res.write(`data: ${JSON.stringify({ error: 'Test case is required' })}\n\n`);
+    // Support both scenario (from TestScriptGenerator) and testCase (from ApiTesting)
+    const inputScenario = scenario || (testCase ? `${testCase.title}: ${testCase.description || ''}\nSteps: ${testCase.steps?.map(s => s.action).join(', ')}` : null);
+
+    if (!inputScenario) {
+      res.write(`data: ${JSON.stringify({ error: 'Scenario or test case is required' })}\n\n`);
       res.end();
       return;
     }
@@ -32,27 +37,30 @@ export default async function handler(req, res) {
       return;
     }
 
-    const prompt = `Generate a ${framework || 'Playwright'} test script in ${language || 'JavaScript'} for the following test case:
+    const prompt = `Generate a ${framework || 'Playwright'} test script in ${language || 'typescript'} for the following test scenario:
 
-Title: ${testCase.title || 'Test'}
-Description: ${testCase.description || ''}
-Preconditions: ${testCase.preconditions?.join(', ') || 'None'}
+Scenario: ${inputScenario}
 
-Steps:
-${testCase.steps?.map((s, i) => `${i + 1}. ${s.action} - Expected: ${s.expectedResult}`).join('\n') || ''}
-
-Expected Result: ${testCase.expectedResult || ''}
+Configuration:
+- Framework: ${framework || 'Playwright'}
+- Language: ${language || 'typescript'}
+- Browser: ${browser || 'chromium'}
+- Headless: ${headless !== false}
+- Use Fixtures: ${useFixtures !== false}
+${testData ? `- Test Data:\n${testData}` : ''}
 
 Generate a complete, runnable test script with:
-- Proper imports and setup
-- Clear comments
-- Best practices for ${framework || 'Playwright'}
-- Assertions for each step
-- Proper cleanup
+- Proper imports and setup for ${framework || 'Playwright'}
+- Clear comments explaining each step
+- Best practices and patterns for ${framework || 'Playwright'}
+- Proper assertions
+- Error handling
+- Cleanup/teardown
 
-Return ONLY the code, no markdown formatting.`;
+Return ONLY the code without any markdown formatting or code blocks.`;
 
-    // Use non-streaming for now to avoid complexity
+    console.log('Calling Gemini API for script generation...');
+    
     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -63,13 +71,14 @@ Return ONLY the code, no markdown formatting.`;
 
     if (!response.ok) {
       const errorText = await response.text();
+      console.error('Gemini API error:', response.status, errorText);
       res.write(`data: ${JSON.stringify({ error: `Gemini API error: ${response.status}` })}\n\n`);
       res.end();
       return;
     }
 
     const result = await response.json();
-    const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
+    let text = result.candidates?.[0]?.content?.parts?.[0]?.text;
     
     if (!text) {
       res.write(`data: ${JSON.stringify({ error: 'No response from Gemini' })}\n\n`);
@@ -77,9 +86,15 @@ Return ONLY the code, no markdown formatting.`;
       return;
     }
 
-    // Send the complete text as a stream
-    const chunks = text.match(/.{1,100}/g) || [text];
-    for (const chunk of chunks) {
+    // Clean up any markdown code blocks
+    text = text.replace(/^```[\w]*\n?/gm, '').replace(/```$/gm, '').trim();
+
+    console.log('Script generated, length:', text.length);
+
+    // Stream the response in chunks
+    const chunkSize = 50;
+    for (let i = 0; i < text.length; i += chunkSize) {
+      const chunk = text.slice(i, i + chunkSize);
       res.write(`data: ${JSON.stringify({ text: chunk })}\n\n`);
     }
 
