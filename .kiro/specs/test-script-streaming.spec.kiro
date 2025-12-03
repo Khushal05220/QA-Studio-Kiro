@@ -1,0 +1,139 @@
+# Test Script Generator with Streaming Spec
+
+## Overview
+Real-time test script generation with streaming AI responses for Selenium, Cypress, Playwright, and Postman.
+
+## Requirements
+
+### Supported Frameworks
+- **Selenium (Python)**: WebDriver automation
+- **Cypress (JavaScript)**: Modern web testing
+- **Playwright (JavaScript)**: Cross-browser automation
+- **Postman (JSON)**: API test collections
+
+### Core Features
+- Test scenario input
+- Framework selection
+- Real-time streaming generation
+- Syntax highlighting
+- Copy to clipboard
+- Download as file
+- Save to library
+- Edit generated scripts
+
+### Streaming Implementation
+- Server-Sent Events (SSE) for real-time updates
+- Progressive script building
+- Character-by-character display
+- Smooth animation
+- Cancel generation option
+
+### Script Quality
+- Production-ready code
+- Best practices followed
+- Proper error handling
+- Clear comments
+- Reusable functions
+- Assertions included
+
+## Technical Implementation
+
+### API Endpoint
+```javascript
+POST /api/generate-test-script/stream
+Body: { scenario: string, framework: string }
+Response: text/event-stream
+```
+
+### Streaming Protocol
+```javascript
+data: {"chunk": "import selenium\n"}
+data: {"chunk": "from selenium import webdriver\n"}
+data: {"done": true}
+```
+
+### Frontend Implementation
+```javascript
+const eventSource = new EventSource('/api/generate-test-script/stream');
+eventSource.onmessage = (event) => {
+  const data = JSON.parse(event.data);
+  if (data.chunk) {
+    appendToScript(data.chunk);
+  }
+  if (data.done) {
+    eventSource.close();
+  }
+};
+```
+
+### Script Templates
+
+**Selenium (Python)**
+```python
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+
+def test_scenario():
+    driver = webdriver.Chrome()
+    # Test steps
+    driver.quit()
+```
+
+**Cypress (JavaScript)**
+```javascript
+describe('Test Scenario', () => {
+  it('should perform test', () => {
+    cy.visit('url');
+    // Test steps
+  });
+});
+```
+
+**Playwright (JavaScript)**
+```javascript
+const { test, expect } = require('@playwright/test');
+
+test('test scenario', async ({ page }) => {
+  await page.goto('url');
+  // Test steps
+});
+```
+
+**Postman (JSON)**
+```json
+{
+  "info": { "name": "Test Collection" },
+  "item": [
+    {
+      "name": "Test Request",
+      "request": { "method": "GET", "url": "" }
+    }
+  ]
+}
+```
+
+## User Flow
+1. User enters test scenario description
+2. Selects target framework
+3. Clicks "Generate Script"
+4. Watches script appear in real-time
+5. Reviews generated code
+6. Copies or downloads script
+7. Optionally saves to library
+
+## Streaming Benefits
+- Immediate feedback
+- Engaging user experience
+- Perceived faster generation
+- Can cancel if going wrong direction
+- Progressive enhancement
+
+## Success Criteria
+- Streaming latency < 100ms per chunk
+- Generate complete script in 5-10 seconds
+- 90%+ code accuracy
+- Proper syntax for all frameworks
+- Smooth, glitch-free streaming
+- No memory leaks on long generations

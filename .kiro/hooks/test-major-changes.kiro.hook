@@ -1,0 +1,13 @@
+{
+  "enabled": true,
+  "name": "Test All Functions on Major Changes",
+  "description": "Triggers comprehensive testing of all functions when major changes are detected in source files, configuration files, or package dependencies to ensure everything works as expected",
+  "version": "1",
+  "when": {
+    "type": "userTriggered"
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Major changes have been detected in the codebase. Please perform comprehensive testing of all functions to ensure they work as expected. Review the changed files, identify all affected functionality, and verify that: 1) All core features are working correctly, 2) No regressions have been introduced, 3) Dependencies and configurations are properly set up, 4) Integration points are functioning, and 5) Error handling is working as expected. Provide a detailed test report."
+  }
+}

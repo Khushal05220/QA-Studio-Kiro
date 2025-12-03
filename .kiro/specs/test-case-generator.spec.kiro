@@ -1,0 +1,76 @@
+# Test Case Generator Spec
+
+## Overview
+AI-powered test case generation tool that converts user stories, requirements, or feature descriptions into comprehensive test cases with multiple scenarios.
+
+## Requirements
+
+### Functional Requirements
+- Accept user input (user story, feature description, or requirements)
+- Generate test cases using AI (Gemini API)
+- Support multiple test case types: Functional, Edge Cases, Negative, Performance
+- Display generated test cases in organized format
+- Allow editing of generated test cases
+- Save test cases to library
+- Export test cases (JSON, CSV)
+- Copy individual test cases to clipboard
+
+### UI Requirements
+- Clean, modern interface with dark theme
+- Textarea for input with placeholder guidance
+- Generate button with loading state
+- Tabbed interface for different test case types
+- Card-based layout for test cases
+- Action buttons: Edit, Save to Library, Copy, Export
+
+### Technical Requirements
+- React functional components with hooks
+- Integration with Gemini API via backend
+- Context API for state management
+- Supabase for data persistence
+- Toast notifications for user feedback
+
+## Implementation
+
+### Components
+- `TestCaseGenerator.jsx` - Main page component
+- Uses `useApp` context for state management
+- Uses `apiService` for AI generation
+- Uses `supabaseService` for data persistence
+
+### API Integration
+```javascript
+POST /api/generate-test-cases
+Body: { input: string, type: string }
+Response: { testCases: Array }
+```
+
+### Data Structure
+```javascript
+{
+  id: string,
+  title: string,
+  description: string,
+  preconditions: string,
+  steps: Array<string>,
+  expectedResult: string,
+  priority: string,
+  type: string,
+  createdAt: timestamp
+}
+```
+
+## User Flow
+1. User enters feature description or user story
+2. User clicks "Generate Test Cases"
+3. AI processes input and generates test cases
+4. Test cases displayed in tabs (Functional, Edge Cases, etc.)
+5. User can edit, save, or export test cases
+6. Saved test cases appear in Library
+
+## Success Criteria
+- Generate relevant test cases within 5 seconds
+- Support various input formats
+- Generate minimum 3-5 test cases per category
+- 95% user satisfaction with generated quality
+- Zero data loss on save operations

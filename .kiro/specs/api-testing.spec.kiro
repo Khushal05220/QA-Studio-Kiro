@@ -1,0 +1,91 @@
+# API Testing Module Spec
+
+## Overview
+Comprehensive API testing tool with request builder, response viewer, test assertions, and collection management.
+
+## Requirements
+
+### Core Features
+- HTTP request builder (GET, POST, PUT, DELETE, PATCH)
+- URL and header configuration
+- Request body editor (JSON, Form Data, Raw)
+- Response viewer with syntax highlighting
+- Status code and timing display
+- Test assertions builder
+- Save requests to collections
+- Environment variables support
+
+### Request Builder
+- Method selector dropdown
+- URL input with validation
+- Headers key-value editor
+- Query parameters editor
+- Body editor with format selection
+- Authentication support (Bearer, Basic, API Key)
+
+### Response Display
+- Status code with color coding
+- Response time
+- Response size
+- Headers viewer
+- Body viewer with JSON formatting
+- Copy response button
+
+### Assertions
+- Status code assertions
+- Response time assertions
+- Header assertions
+- Body content assertions
+- JSON path assertions
+
+### Collections
+- Create/edit/delete collections
+- Organize requests in folders
+- Import/export collections
+- Share collections
+
+## Technical Implementation
+
+### State Management
+```javascript
+{
+  method: 'GET',
+  url: '',
+  headers: [],
+  queryParams: [],
+  body: { type: 'json', content: '' },
+  auth: { type: 'none', token: '' },
+  response: null,
+  assertions: []
+}
+```
+
+### API Service
+```javascript
+POST /api/execute-request
+Body: { method, url, headers, body, auth }
+Response: { status, data, headers, time }
+```
+
+### Supabase Schema
+```sql
+api_collections (
+  id, user_id, name, description, requests, created_at
+)
+```
+
+## User Flow
+1. User selects HTTP method
+2. Enters URL and configures request
+3. Adds headers, params, body as needed
+4. Clicks "Send Request"
+5. Views response with status and data
+6. Optionally adds assertions
+7. Saves to collection for reuse
+
+## Success Criteria
+- Support all major HTTP methods
+- Handle various content types
+- Display responses within 100ms of completion
+- Support collections with 100+ requests
+- Zero data corruption on save

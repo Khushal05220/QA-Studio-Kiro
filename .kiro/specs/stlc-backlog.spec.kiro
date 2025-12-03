@@ -1,0 +1,121 @@
+# STLC Backlog Management Spec
+
+## Overview
+Software Testing Life Cycle (STLC) backlog management system for tracking user stories and bugs through the testing lifecycle.
+
+## Requirements
+
+### User Stories Management
+- Create/edit/delete user stories
+- Fields: Title, Description, Acceptance Criteria, Story Points, Priority, Epic, Status
+- AI-powered generation from raw notes
+- Kanban board view
+- List view with sorting/filtering
+- Drag-and-drop status updates
+
+### Bug Tracking
+- Create/edit/delete bugs
+- Fields: Title, Description, Steps to Reproduce, Severity, Priority, Environment, Status
+- AI-powered generation from raw notes
+- Kanban board view
+- List view with filtering
+- Status workflow tracking
+
+### Views
+- **Kanban Board**: Visual workflow with columns for each status
+- **List View**: Tabular display with all fields
+- Toggle between views
+- Search functionality
+- Export to JSON/CSV
+
+### Status Workflow
+- New → Active → In Progress → Testing → Done → Closed
+- Drag-and-drop status changes in Kanban
+- Status dropdown in List view
+
+### AI Generation
+- Paste raw notes or descriptions
+- AI generates structured user story or bug report
+- Pre-fills all fields intelligently
+- User can edit before saving
+
+## Technical Implementation
+
+### Data Models
+
+**User Story**
+```javascript
+{
+  id: string,
+  title: string,
+  description: string,
+  acceptanceCriteria: string,
+  storyPoints: number,
+  priority: 'Critical' | 'High' | 'Medium' | 'Low',
+  epic: string,
+  status: string,
+  createdAt: timestamp
+}
+```
+
+**Bug**
+```javascript
+{
+  id: string,
+  title: string,
+  description: string,
+  stepsToReproduce: Array<{step: number, description: string}>,
+  severity: 'Critical' | 'Major' | 'Minor' | 'Trivial',
+  priority: 'Critical' | 'High' | 'Medium' | 'Low',
+  environment: string,
+  status: string,
+  createdAt: timestamp
+}
+```
+
+### API Endpoints
+```javascript
+POST /api/generate-from-notes
+Body: { notes: string, type: 'story' | 'bug' }
+Response: { generated: Object }
+```
+
+### Context Actions
+- ADD_USER_STORY
+- UPDATE_USER_STORY
+- DELETE_USER_STORY
+- ADD_BUG
+- UPDATE_BUG
+- DELETE_BUG
+
+## User Flows
+
+### Create User Story
+1. Click "+ User Story" button
+2. Enter details manually OR paste raw notes
+3. If using AI: Click "Generate" to auto-fill fields
+4. Review and edit generated content
+5. Click "Save"
+6. Story appears in Kanban/List view
+
+### Track Bug
+1. Click "+ Bug" button
+2. Enter bug details or paste raw notes
+3. AI generates structured bug report
+4. Add steps to reproduce
+5. Set severity and priority
+6. Save to backlog
+7. Track through workflow
+
+### Kanban Workflow
+1. View items organized by status columns
+2. Drag item to new status column
+3. Status updates automatically
+4. Visual progress tracking
+
+## Success Criteria
+- Create story/bug in under 30 seconds
+- AI generation accuracy > 85%
+- Smooth drag-and-drop with no lag
+- Support 1000+ items without performance issues
+- Export complete data without loss

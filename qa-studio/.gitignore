@@ -1,0 +1,52 @@
+node_modules/
+dist/
+.env
+*.log
+.DS_Store
+coverage/
+
+# Temporary development files
+EMERGENCY_FIX.md
+FINAL_FIXES.md
+FIX_DELETE_AND_STATUS_ISSUES.md
+CRITICAL_FIX_REQUIRED.md
+DEBUG_DELETE.md
+DELETE_FIX_INSTRUCTIONS.md
+SIMPLE_FIX_STEPS.md
+TEST_IN_BROWSER.md
+FIXED_SUMMARY.md
+FINAL_SOLUTION.md
+CHECK_AUTH.md
+MIGRATION_GUIDE.md
+RUN_THIS_SQL.txt
+cleanup-duplicates.sql
+test-supabase-connection.js
+TESTING_GUIDE_PRODUCTION.md
+PRODUCTION_FIXES.md
+LIBRARY_FIXES.md
+SCENARIO_GROUPING_UPDATE.md
+LIBRARY_FEATURE.md
+WHAT_TO_DO_NEXT.md
+DEPLOYMENT_COMPLETE.md
+VERIFICATION_CHECKLIST.md
+PRE_DEPLOYMENT_TEST_REPORT.md
+
+# GitHub setup files (temporary)
+GITHUB_SETUP.md
+GITHUB_CHECKLIST.md
+PUSH_TO_GITHUB.md
+PUSH_NOW.md
+REPOSITORY_READY.md
+START_HERE.md
+SETUP_GITHUB.bat
+setup-github.sh
+
+# Migration files (keep only the main one)
+supabase-migration-add-metadata.sql
+supabase-migration-add-scenario.sql
+supabase-migration-api-collections.sql
+supabase-migration-fix-upsert.sql
+supabase-migration-fixed.sql
+
+# Metadata
+metadata.json
