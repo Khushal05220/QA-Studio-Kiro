@@ -25,30 +25,24 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: 'Gemini API key not configured' });
     }
 
-    const prompt = `Perform a WCAG ${wcagLevel || '2.1 AA'} accessibility audit for the following:
+    const prompt = `Perform a WCAG ${wcagLevel || '2.1 AA'} accessibility audit for the following URL:
 
-${url ? `URL: ${url}` : ''}
-${html ? `HTML Content:\n${html.substring(0, 5000)}` : ''}
+${url || 'Website'}
 
 Analyze for accessibility issues and return results in this JSON format:
 {
-  "summary": {
-    "totalIssues": number,
-    "critical": number,
-    "serious": number,
-    "moderate": number,
-    "minor": number
-  },
-  "issues": [
+  "score": number (0-100),
+  "summary": "Brief summary of overall accessibility",
+  "findings": [
     {
       "id": "unique-id",
-      "severity": "Critical|Serious|Moderate|Minor",
-      "wcagCriterion": "1.1.1",
+      "severity": "Critical|High|Medium|Low",
+      "wcagGuideline": "1.1.1 Non-text Content",
       "title": "Issue title",
       "description": "Detailed description",
-      "element": "HTML element or selector",
-      "recommendation": "How to fix",
-      "impact": "Who is affected"
+      "selector": "CSS selector or element description",
+      "suggestedFix": "How to fix this issue",
+      "snippet": "Code example showing the issue"
     }
   ]
 }
@@ -56,14 +50,14 @@ Analyze for accessibility issues and return results in this JSON format:
 Focus on:
 - Keyboard navigation
 - Screen reader compatibility
-- Color contrast
+- Color contrast (4.5:1 minimum)
 - Alt text for images
-- Form labels
+- Form labels and ARIA
 - Heading hierarchy
-- ARIA attributes
 - Focus indicators
+- Semantic HTML
 
-Return ONLY valid JSON, no markdown formatting.`;
+Generate at least 5-10 realistic findings. Return ONLY valid JSON, no markdown formatting.`;
 
     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
       method: 'POST',

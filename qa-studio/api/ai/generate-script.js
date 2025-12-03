@@ -19,36 +19,41 @@ export default async function handler(req, res) {
   try {
     const { testCase, framework, language } = req.body;
 
-    if (!testCase || !framework) {
-      return res.status(400).json({ error: 'Test case and framework are required' });
+    if (!testCase) {
+      res.write(`data: ${JSON.stringify({ error: 'Test case is required' })}\n\n`);
+      res.end();
+      return;
     }
 
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
-      return res.status(500).json({ error: 'Gemini API key not configured' });
+      res.write(`data: ${JSON.stringify({ error: 'Gemini API key not configured' })}\n\n`);
+      res.end();
+      return;
     }
 
-    const prompt = `Generate a ${framework} test script in ${language || 'JavaScript'} for the following test case:
+    const prompt = `Generate a ${framework || 'Playwright'} test script in ${language || 'JavaScript'} for the following test case:
 
-Title: ${testCase.title}
+Title: ${testCase.title || 'Test'}
 Description: ${testCase.description || ''}
 Preconditions: ${testCase.preconditions?.join(', ') || 'None'}
 
 Steps:
 ${testCase.steps?.map((s, i) => `${i + 1}. ${s.action} - Expected: ${s.expectedResult}`).join('\n') || ''}
 
-Expected Result: ${testCase.expectedResult}
+Expected Result: ${testCase.expectedResult || ''}
 
 Generate a complete, runnable test script with:
 - Proper imports and setup
 - Clear comments
-- Best practices for ${framework}
+- Best practices for ${framework || 'Playwright'}
 - Assertions for each step
 - Proper cleanup
 
 Return ONLY the code, no markdown formatting.`;
 
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?key=${apiKey}`, {
+    // Use non-streaming for now to avoid complexity
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -58,30 +63,24 @@ Return ONLY the code, no markdown formatting.`;
 
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(`Gemini API error: ${response.status} ${errorText}`);
+      res.write(`data: ${JSON.stringify({ error: `Gemini API error: ${response.status}` })}\n\n`);
+      res.end();
+      return;
     }
 
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
+    const result = await response.json();
+    const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
+    
+    if (!text) {
+      res.write(`data: ${JSON.stringify({ error: 'No response from Gemini' })}\n\n`);
+      res.end();
+      return;
+    }
 
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-
-      const chunk = decoder.decode(value, { stream: true });
-      const lines = chunk.split('\n').filter(line => line.trim());
-
-      for (const line of lines) {
-        try {
-          const data = JSON.parse(line);
-          const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-          if (text) {
-            res.write(`data: ${JSON.stringify({ text })}\n\n`);
-          }
-        } catch (e) {
-          // Skip invalid JSON
-        }
-      }
+    // Send the complete text as a stream
+    const chunks = text.match(/.{1,100}/g) || [text];
+    for (const chunk of chunks) {
+      res.write(`data: ${JSON.stringify({ text: chunk })}\n\n`);
     }
 
     res.write('data: [DONE]\n\n');
