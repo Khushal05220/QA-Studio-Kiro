@@ -78,7 +78,8 @@ Return ONLY valid JSON, no markdown formatting.`;
           parts: [{
             text: prompt
           }]
-        }]
+        }],
+        generationConfig: { temperature: 0.2 }
       })
     });
 

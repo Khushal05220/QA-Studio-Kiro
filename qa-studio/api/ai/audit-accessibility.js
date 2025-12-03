@@ -20,49 +20,76 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'URL is required' });
     }
 
+    // Validate URL format
+    const urlPattern = /^https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)$/;
+    if (!urlPattern.test(url)) {
+      return res.status(400).json({ error: 'Please enter a valid URL (e.g., https://example.com)' });
+    }
+
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
       return res.status(500).json({ error: 'Gemini API key not configured' });
     }
 
-    const prompt = `Perform a WCAG 2.1 AA accessibility audit for the website: ${url}
+    // Try to fetch the actual website to verify it exists
+    let pageContent = '';
+    try {
+      const pageResponse = await fetch(url, { 
+        method: 'GET',
+        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; AccessibilityAudit/1.0)' },
+        signal: AbortSignal.timeout(5000)
+      });
+      if (!pageResponse.ok) {
+        return res.status(400).json({ error: `Cannot access URL: ${pageResponse.status} ${pageResponse.statusText}` });
+      }
+      pageContent = await pageResponse.text();
+      pageContent = pageContent.substring(0, 10000); // Limit content size
+    } catch (fetchError) {
+      return res.status(400).json({ error: `Cannot access URL: ${fetchError.message}` });
+    }
 
-Analyze for accessibility issues and return results in this exact JSON format:
+    const prompt = `Analyze this real webpage HTML for WCAG 2.1 AA accessibility issues:
+
+URL: ${url}
+HTML Content (first 10000 chars):
+${pageContent}
+
+Return accessibility audit results in this exact JSON format:
 {
   "score": 75,
-  "summary": "Brief summary of overall accessibility status",
+  "summary": "Brief summary based on actual HTML analysis",
   "findings": [
     {
       "id": "finding-1",
       "severity": "Error",
       "wcagGuideline": "1.1.1 Non-text Content",
-      "title": "Images missing alt text",
-      "description": "Several images on the page lack alternative text descriptions",
-      "selector": "img.hero-image",
-      "suggestedFix": "Add descriptive alt attributes to all images",
-      "snippet": "<img src='hero.jpg' class='hero-image'>"
+      "title": "Specific issue found in the HTML",
+      "description": "Description of the actual issue",
+      "selector": "actual CSS selector from the HTML",
+      "suggestedFix": "How to fix this specific issue",
+      "snippet": "actual HTML snippet from the page"
     }
   ]
 }
 
 IMPORTANT:
-- severity MUST be either "Error" or "Warning" (not Critical/High/Medium/Low)
-- Generate 5-10 realistic findings based on common accessibility issues
-- Include a mix of Error and Warning severities
-- Score should be 0-100 based on severity of issues found
+- Analyze the ACTUAL HTML content provided
+- severity MUST be "Error" or "Warning" only
+- Include real selectors and snippets from the HTML
+- Score 0-100 based on actual issues found
 
-Return ONLY valid JSON, no markdown formatting.`;
+Return ONLY valid JSON.`;
 
     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }]
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.1 }
       })
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
       throw new Error(`Gemini API error: ${response.status}`);
     }
 

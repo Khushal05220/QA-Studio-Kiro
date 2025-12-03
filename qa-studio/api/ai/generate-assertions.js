@@ -25,43 +25,27 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: 'Gemini API key not configured' });
     }
 
-    const prompt = `Generate test assertions for this API response:
-
-Request: ${request?.method || 'GET'} ${request?.url || ''}
-Status: ${response.status}
-Response Body:
-${typeof response.body === 'string' ? response.body.substring(0, 2000) : JSON.stringify(response.body, null, 2).substring(0, 2000)}
-
-Generate assertions in this exact JSON format:
-{
-  "assertions": [
-    {
-      "type": "status",
-      "description": "Status code should be 200",
-      "code": "pm.test('Status code is 200', function() { pm.response.to.have.status(200); });"
-    },
-    {
-      "type": "body",
-      "description": "Response should have required fields",
-      "code": "pm.test('Has required fields', function() { var json = pm.response.json(); pm.expect(json).to.have.property('id'); });"
+    let responseBody = response.body;
+    if (typeof responseBody === 'string' && responseBody.length > 1500) {
+      responseBody = responseBody.substring(0, 1500) + '...';
     }
-  ]
-}
 
-Generate 5-8 meaningful assertions covering:
-- Status code validation
-- Response structure
-- Data type checks
-- Required field presence
-- Value validations
+    const prompt = `Generate Postman test assertions for this API response:
 
-Return ONLY valid JSON, no markdown formatting.`;
+Status: ${response.status}
+Body: ${responseBody}
+
+Return JSON:
+{"assertions":[{"type":"status","description":"Status is ${response.status}","code":"pm.test('Status is ${response.status}', () => pm.response.to.have.status(${response.status}));"},{"type":"body","description":"Response is JSON","code":"pm.test('Response is JSON', () => pm.response.to.be.json);"}]}
+
+Add 3-5 more relevant assertions. Return ONLY valid JSON.`;
 
     const apiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }]
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.1 }
       })
     });
 

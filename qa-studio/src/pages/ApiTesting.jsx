@@ -450,14 +450,6 @@ export function ApiTesting() {
                     {generatingAssertions ? <Spinner size="sm" /> : <Icons.Sparkles className="w-4 h-4" />}
                     Generate Assertions
                   </button>
-                  <button
-                    onClick={handleGenerateScript}
-                    disabled={generatingScript}
-                    className="btn-accent text-sm flex items-center gap-1"
-                  >
-                    {generatingScript ? <Spinner size="sm" /> : <Icons.Code className="w-4 h-4" />}
-                    Generate Script
-                  </button>
                 </div>
               </div>
               <div className="border-b border-gray-800">
