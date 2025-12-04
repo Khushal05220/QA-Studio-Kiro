@@ -1,4 +1,4 @@
-# QA Studio
+# QA Studio - Kiro
 
 AI-powered testing workflow automation platform for QA engineers. Generate test cases, scripts, perform accessibility audits, API testing, and manage STLC artifacts with multi-user support and cloud persistence.
 
